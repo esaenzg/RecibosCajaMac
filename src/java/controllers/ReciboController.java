@@ -108,7 +108,7 @@ public class ReciboController implements Serializable {
         }
     }
 
-    public void agregar() {
+    public void agregar() { //agregar facturas a la tabla
         if (numRecibo != null) {
             listFactura = new ArrayList<>();
             String selectSql2 = "SELECT * FROM FAC_Recibos_C where NumRecibo=" + numRecibo;
