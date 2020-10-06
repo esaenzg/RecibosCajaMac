@@ -106,7 +106,7 @@
                                                                 <p:inputText id="correo" value="#{reciboController.recibo.correo}"  style="height: 28px!important"  disabled="#{reciboController.recibo.montoRecibo eq null}"
                                                                              tabindex="20" readonly="#{reciboController.opcion ne 1 }" validatorMessage="El correo electrónico es incorrecto"
                                                                              placeholder="correo@ejemplo.com" required="#{reciboController.sendCorreo}" requiredMessage="* Correo electrónico">
-                                                                    <f:validateRegex pattern="[\w\.-]*[a-zA-Z0-9_]@[\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]" disabled="#{not reciboController.sendCorreo}"/>
+                                                                    <f:validateRegex pattern="[\w\.-]*[a-zA-Z0-9_]*[\w\.-]@[\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]" disabled="#{not reciboController.sendCorreo}"/>
                                                                 </p:inputText>
                                                             </div>
                                                         </div>
@@ -268,7 +268,7 @@
                                         <p:outputLabel value="Serie" style="font-weight: bold"/>
                                         <p:outputLabel value="#{factura.serie}"/>
                                         <p:outputLabel value="Factura/DTE" style="font-weight: bold"/>
-                                        <p:outputLabel value="#{factura.numDTE}"/>
+                                        <p:outputLabel value="#{factura.numAutorizacion}"/>
                                         <p:outputLabel value="Fecha" style="font-weight: bold"/>
                                         <p:outputLabel value="#{reciboController.formatoFecha(factura.fecha)}"/>
                                         <p:outputLabel value="Total" style="font-weight: bold"/>
@@ -504,7 +504,7 @@
                                  rowIndexVar="row"
                                  style="font-size: 10px"
                                  selectionMode="single"
-                                 rowKey="#{factura.numDTE}">
+                                 rowKey="#{factura.numAutorizacion}">
                         <p:ajax event="rowSelect" listener="#{reciboController.selectFactura}" update="frmIngreso frmIngreso:porAsignar frmIngreso:btnGuardar"/>
 
                         <p:column headerText="Serie"  style="text-align: center">
@@ -516,7 +516,7 @@
                         <p:column headerText="Factura/DTE" style="text-align: center">
                             <p:commandLink action="#{reciboController.selectFactura2(factura)}" 
                                            update="frmIngreso frmIngreso:porAsignar frmIngreso:btnGuardar">
-                                <p:outputLabel value="#{factura.numDTE}" style="text-transform: uppercase"/>
+                                <p:outputLabel value="#{factura.numAutorizacion}" style="text-transform: uppercase"/>
                             </p:commandLink>
                         </p:column>
                         <p:column headerText="Fecha" style="text-align: center">

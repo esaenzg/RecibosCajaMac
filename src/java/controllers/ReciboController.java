@@ -161,6 +161,7 @@ public class ReciboController implements Serializable {
                         fac.setAbono(Double.valueOf(result.getString(10)));
                         fac.setTotal(Double.valueOf(result.getString(9)));
                         fac.setFecha(result.getDate(8));
+                        fac.setNumAutorizacion(result.getString(7) != null && !result.getString(7).equals("null") && !result.getString(7).isEmpty() ? result.getString(7):result.getString(6));
                         fac.setEstado(result.getString(12) != null ? Short.valueOf(result.getString(12)) : null);
                         fac.setSecuencia(result.getInt(2));
                         fac.setNumPago(result.getInt(13));
@@ -193,6 +194,7 @@ public class ReciboController implements Serializable {
                 fac = new Factura();
                 fac.setSerie(result.getString(5));
                 fac.setNumDTE(result.getString(6));
+                fac.setNumAutorizacion(result.getString(7) != null && !result.getString(7).equals("null") && !result.getString(7).isEmpty() ? result.getString(7):result.getString(6));
                 fac.setSaldo(result.getDouble(11));
                 fac.setAbono(result.getDouble(10));
                 fac.setTotal(result.getDouble(9));
@@ -547,11 +549,11 @@ public class ReciboController implements Serializable {
     }
 
     public void consultaFacturas() {
-        String query = "select SerieFactura, NumFactura, FechaFac, Saldo, (Saldo-(select sum(abono) from FAC_Recibos_D R where R.SerieFactura=Q.SerieFactura and "
-                + "R.NumDTE=Q.NumFactura and R.Estado is null)) as SaldoRecibo from QRY_FAC_SaldosPagosHis Q where NIT='" + recibo.getNit() + "' and "
-                + "((select sum(abono) from FAC_Recibos_D R where R.SerieFactura=Q.SerieFactura and R.NumDTE=Q.NumFactura and (R.Estado=1 or R.Estado is null))<>Saldo "
-                + "or (select sum(abono) from FAC_Recibos_D R where R.SerieFactura=Q.SerieFactura and R.NumDTE=Q.NumFactura and (R.Estado=1 or R.Estado is null)) "
-                + "is null) and Cancelada=0 order by FechaFac asc;";
+        String query = "select Q.SerieFactura, Q.NumFactura, FechaFac, Saldo, (Saldo-(select sum(abono) from FAC_Recibos_D R where R.SerieFactura=Q.SerieFactura and R.NumDTE=Q.NumFactura and R.Estado is null)) "
+                + "as SaldoRecibo, F.NumeroRegistro from QRY_FAC_SaldosPagosHis Q inner join FAC_Facturas_C F on Q.SerieFactura=F.SerieFactura and Q.NumFactura=F.NumFactura where Q.NIT='" + recibo.getNit() + "' and ((select sum(abono) "
+                + "from FAC_Recibos_D R  where R.SerieFactura=Q.SerieFactura and R.NumDTE=Q.NumFactura and "
+                + "(R.Estado=1 or R.Estado is null))<>Saldo or (select sum(abono) from FAC_Recibos_D R where R.SerieFactura=Q.SerieFactura and R.NumDTE=Q.NumFactura and (R.Estado=1 or R.Estado is null)) "
+                + "is null) and Q.Cancelada=0 order by FechaFac asc;";
         System.out.println("query: " + query);
         ResultSet result = conexion.consulta(query);
         try {
@@ -562,6 +564,7 @@ public class ReciboController implements Serializable {
                 factura = new Factura();
                 factura.setSerie(result.getString(1));
                 factura.setNumDTE(result.getString(2));
+                factura.setNumAutorizacion(result.getString(6) != null && !result.getString(6).isEmpty() ? result.getString(6) : result.getString(2));
                 factura.setFecha(parsearFecha(result.getString(3)));
                 factura.setTotal(Double.valueOf(result.getString(5) != null ? result.getString(5) : result.getString(4)));
                 listAllFactura.add(factura);
@@ -628,6 +631,7 @@ public class ReciboController implements Serializable {
                         newFactura = new Factura();
                         newFactura.setSerie(factura.getSerie());
                         newFactura.setNumDTE(factura.getNumDTE());
+                        newFactura.setNumAutorizacion(factura.getNumAutorizacion());
                         newFactura.setFecha(factura.getFecha());
                         newFactura.setTotal(factura.getTotal());
                         if (factura.getTotal() > monto) {
@@ -700,6 +704,7 @@ public class ReciboController implements Serializable {
                     Factura newFactura = new Factura();
                     newFactura.setSerie(factura.getSerie());
                     newFactura.setNumDTE(factura.getNumDTE());
+                    newFactura.setNumAutorizacion(factura.getNumAutorizacion());
                     newFactura.setFecha(factura.getFecha());
                     newFactura.setTotal(factura.getTotal());
                     if (factura.getTotal() > monto) {
@@ -748,6 +753,7 @@ public class ReciboController implements Serializable {
                     Factura newFactura = new Factura();
                     newFactura.setSerie(factura.getSerie());
                     newFactura.setNumDTE(factura.getNumDTE());
+                    newFactura.setNumAutorizacion(factura.getNumAutorizacion());
                     newFactura.setFecha(factura.getFecha());
                     newFactura.setTotal(factura.getTotal());
                     if (factura.getTotal() > monto) {
@@ -835,6 +841,16 @@ public class ReciboController implements Serializable {
         }
         return nombre;
     }
+    
+    public String obtenerCuenta(Integer codigo) {
+        String nombre = "";
+        for (Banco banco : listCuentas) {
+            if (Objects.equals(banco.getCodBanco(), codigo)) {
+                nombre = banco.getNombre();
+            }
+        }
+        return nombre;
+    }
 
     public void confirmarGuardado() {
         System.out.println("whatsapp: " + recibo.getWhatsapp());
@@ -842,7 +858,6 @@ public class ReciboController implements Serializable {
             System.out.println("wasap null");
             sndWhatsapp = false;
         } else {
-            sndWhatsapp = true;
             System.out.println("wasap not null");
         }
         if (sendCorreo || sndWhatsapp) {
@@ -879,7 +894,7 @@ public class ReciboController implements Serializable {
                     recibo.setNombreBanco2(obtenerBanco(recibo.getCodBanco2()));
                 }
                 if (recibo.getBancoDeposito() != null) {
-                    recibo.setNombreBancoD(obtenerBanco(recibo.getBancoDeposito()));
+                    recibo.setNombreBancoD(obtenerCuenta(recibo.getBancoDeposito()));
                 }
                 ImprimirRecibo print = new ImprimirRecibo();
                 if (print.printLista(listFactura, recibo)) {
@@ -1029,7 +1044,7 @@ public class ReciboController implements Serializable {
             recibo.setNombreBanco2(obtenerBanco(recibo.getCodBanco2()));
         }
         if (recibo.getBancoDeposito() != null) {
-            recibo.setNombreBancoD(obtenerBanco(recibo.getBancoDeposito()));
+            recibo.setNombreBancoD(obtenerCuenta(recibo.getBancoDeposito()));
         }
         if (print.printLista(listFactura, recibo)) {
             InputStream stream = FacesContext.getCurrentInstance().getExternalContext().getResourceAsStream("/resources/archivos/RCE-" + formatRCE(recibo.getNumRecibo()) + ".pdf");
@@ -1053,6 +1068,43 @@ public class ReciboController implements Serializable {
 //        }
     }
 
+    public void reenviar() {
+        ImprimirRecibo print = new ImprimirRecibo();
+        if (recibo.getCodBanco1() != null) {
+            recibo.setNombreBanco1(obtenerBanco(recibo.getCodBanco1()));
+        }
+        if (recibo.getCodBanco2() != null) {
+            recibo.setNombreBanco2(obtenerBanco(recibo.getCodBanco2()));
+        }
+        if (recibo.getBancoDeposito() != null) {
+            recibo.setNombreBancoD(obtenerCuenta(recibo.getBancoDeposito()));
+        }
+        if (print.printLista(listFactura, recibo)) {
+            FacesContext context = FacesContext.getCurrentInstance();
+            try {
+                String ruta = getPath() + "resources/archivos/RCE-" + formatRCE(recibo.getNumRecibo()) + ".pdf";
+                Thread proceso = new Proceso(user + "-thread", recibo.getCorreo(), recibo.getNumRecibo(), recibo.getMontoRecibo(), recibo.getFecha(), ruta, context);
+                proceso.start();
+                if (sndWhatsapp) {
+                    System.out.println("Envia whatsapp");
+                    sendWhatsapp();
+                } else {
+                    System.out.println("no envia whatsapp");
+                }
+                PrimeFaces.current().executeScript("PF('dlgReenviar').hide();");
+                FacesContext.getCurrentInstance().addMessage(null,
+                        new FacesMessage(FacesMessage.SEVERITY_INFO, "Correo enviado", ""));
+            } catch (Exception e) {
+                FacesContext.getCurrentInstance().addMessage(null,
+                        new FacesMessage(FacesMessage.SEVERITY_ERROR, "Hubo un error al intentar enviar el correo", ""));
+                e.printStackTrace();
+            }
+        } else {
+            FacesContext.getCurrentInstance().addMessage(null,
+                    new FacesMessage(FacesMessage.SEVERITY_ERROR, "Hubo un error al intentar generar el archivo", ""));
+        }
+    }
+
     public void reimprimirMovil() {
 //        try {
 //            sendWhatsapp();
@@ -1065,7 +1117,7 @@ public class ReciboController implements Serializable {
             recibo.setNombreBanco2(obtenerBanco(recibo.getCodBanco2()));
         }
         if (recibo.getBancoDeposito() != null) {
-            recibo.setNombreBancoD(obtenerBanco(recibo.getBancoDeposito()));
+            recibo.setNombreBancoD(obtenerCuenta(recibo.getBancoDeposito()));
         }
         if (print.printLista(listFactura, recibo)) {
             InputStream stream = FacesContext.getCurrentInstance().getExternalContext().getResourceAsStream("/resources/archivos/RCE-" + formatRCE(recibo.getNumRecibo()) + ".pdf");
@@ -1109,7 +1161,7 @@ public class ReciboController implements Serializable {
             recibo.setNombreBanco2(obtenerBanco(recibo.getCodBanco2()));
         }
         if (recibo.getBancoDeposito() != null) {
-            recibo.setNombreBancoD(obtenerBanco(recibo.getBancoDeposito()));
+            recibo.setNombreBancoD(obtenerCuenta(recibo.getBancoDeposito()));
         }
         if (print.printLista(listFactura, recibo)) {
             PrimeFaces.current().executeScript("PF('dlgPDF').show();");
@@ -1127,7 +1179,7 @@ public class ReciboController implements Serializable {
             recibo.setNombreBanco2(obtenerBanco(recibo.getCodBanco2()));
         }
         if (recibo.getBancoDeposito() != null) {
-            recibo.setNombreBancoD(obtenerBanco(recibo.getBancoDeposito()));
+            recibo.setNombreBancoD(obtenerCuenta(recibo.getBancoDeposito()));
         }
         ImprimirRecibo print = new ImprimirRecibo();
         if (print.printLista(listFactura, recibo)) {
@@ -1143,63 +1195,77 @@ public class ReciboController implements Serializable {
     }
 
     public void enviarCorreo() {
-        // TODO add your handling code here:
-        String correo = "info@tihsa.com"; //tu correo
-        String password = "IT2020rec"; //tu contraseña
-        String mensaje = "Macpartes te agradece por el pago realizado por un monto de Q " + decimal(recibo.getMontoRecibo()) + ", el día " + formatoFecha(recibo.getFecha())
-                + ", según detalle en recibo de caja No. RCE-" + formatRCE(recibo.getNumRecibo()) + ". Consultas al teléfono 2506-2909";
-//        String mensaje = "Gracias por el pago realizado a su cuenta con NIT " + recibo.getNit() + " por un monto de Q " + decimal(recibo.getMontoRecibo())
-//                + " el dia " + formatoFecha(recibo.getFecha()) + ". Para más información comunicarse al 2506 2900";
-        String titulo = "Macpartes, S.A.";
-        String emisor = "info@tihsa.com";//tu correo
-        String receptor = recibo.getCorreo();
-
         try {
-            Properties p = new Properties();
-
-            Properties props = new Properties();
-            props.setProperty("mail.smtp.host", "smtp.gmail.com");//host de hotmail
-            props.setProperty("mail.smtp.starttls.enable", "true");
-            props.setProperty("mail.smtp.port", "587");//puerto de conexion
-            props.setProperty("mail.smtp.user", correo); //verificacion del correo
-            props.setProperty("mail.smtp.auth", "false");
-            Session session = Session.getDefaultInstance(props);
-            session.setDebug(true);
-            MimeMessage message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(emisor));
-            message.addRecipients(Message.RecipientType.TO, receptor); // remitente
-            message.addRecipients(Message.RecipientType.TO, "recibos@tihsa.com"); // remitente
-            message.setSubject(titulo);
-            message.setText(mensaje,
-                    "ISO-8859-1", "html");
+            FacesContext context = FacesContext.getCurrentInstance();
             String ruta = getPath() + "resources/archivos/RCE-" + formatRCE(recibo.getNumRecibo()) + ".pdf";
-            BodyPart texto = new MimeBodyPart();
-            texto.setText(mensaje);
-            BodyPart archivo = new MimeBodyPart();
-            archivo.setDataHandler(new DataHandler(new FileDataSource(new File(ruta))));
-            archivo.setFileName("Recibo de Caja.pdf");
-            MimeMultipart body = new MimeMultipart();
-            body.addBodyPart(texto);
-            body.addBodyPart(archivo);
-            message.setContent(body);
-            Transport t = session.getTransport("smtp");
-            t.connect(correo, password); // aquie es lo delicado donde se loguea
-            t.sendMessage(message, message.getAllRecipients());// aqi envia el mensaje
-            t.close();
+            Thread proceso = new Proceso(user + "-thread", recibo.getCorreo(), recibo.getNumRecibo(), recibo.getMontoRecibo(), recibo.getFecha(), ruta, context);
+            proceso.start();
             FacesContext.getCurrentInstance().addMessage(null,
                     new FacesMessage(FacesMessage.SEVERITY_INFO, "Correo enviado", ""));
-        } catch (HeadlessException | MessagingException e) {
+        } catch (Exception e) {
             FacesContext.getCurrentInstance().addMessage(null,
                     new FacesMessage(FacesMessage.SEVERITY_ERROR, "Hubo un error al intentar enviar el correo", ""));
             e.printStackTrace();
         }
     }
 
+//    public void enviarCorreo() {
+//        // TODO add your handling code here:
+//        String correo = "info@tihsa.com"; //tu correo
+//        String password = "IT2020rec"; //tu contraseña
+//        String mensaje = "Macpartes te agradece por el pago realizado por un monto de Q " + decimal(recibo.getMontoRecibo()) + ", el día " + formatoFecha(recibo.getFecha())
+//                + ", según detalle en recibo de caja No. RCE-" + formatRCE(recibo.getNumRecibo()) + ". Consultas al teléfono 2506-2909";
+////        String mensaje = "Gracias por el pago realizado a su cuenta con NIT " + recibo.getNit() + " por un monto de Q " + decimal(recibo.getMontoRecibo())
+////                + " el dia " + formatoFecha(recibo.getFecha()) + ". Para más información comunicarse al 2506 2900";
+//        String titulo = "Macpartes, S.A.";
+//        String emisor = "info@tihsa.com";//tu correo
+//        String receptor = recibo.getCorreo();
+//
+//        try {
+//            Properties p = new Properties();
+//
+//            Properties props = new Properties();
+//            props.setProperty("mail.smtp.host", "smtp.gmail.com");//host de hotmail
+//            props.setProperty("mail.smtp.starttls.enable", "true");
+//            props.setProperty("mail.smtp.port", "587");//puerto de conexion
+//            props.setProperty("mail.smtp.user", correo); //verificacion del correo
+//            props.setProperty("mail.smtp.auth", "false");
+//            Session session = Session.getDefaultInstance(props);
+//            session.setDebug(true);
+//            MimeMessage message = new MimeMessage(session);
+//            message.setFrom(new InternetAddress(emisor));
+//            message.addRecipients(Message.RecipientType.TO, receptor); // remitente
+//            message.addRecipients(Message.RecipientType.TO, "recibos@tihsa.com"); // remitente
+//            message.setSubject(titulo);
+//            message.setText(mensaje,
+//                    "ISO-8859-1", "html");
+//            String ruta = getPath() + "resources/archivos/RCE-" + formatRCE(recibo.getNumRecibo()) + ".pdf";
+//            BodyPart texto = new MimeBodyPart();
+//            texto.setText(mensaje);
+//            BodyPart archivo = new MimeBodyPart();
+//            archivo.setDataHandler(new DataHandler(new FileDataSource(new File(ruta))));
+//            archivo.setFileName("Recibo de Caja.pdf");
+//            MimeMultipart body = new MimeMultipart();
+//            body.addBodyPart(texto);
+//            body.addBodyPart(archivo);
+//            message.setContent(body);
+//            Transport t = session.getTransport("smtp");
+//            t.connect(correo, password); // aquie es lo delicado donde se loguea
+//            t.sendMessage(message, message.getAllRecipients());// aqi envia el mensaje
+//            t.close();
+//            FacesContext.getCurrentInstance().addMessage(null,
+//                    new FacesMessage(FacesMessage.SEVERITY_INFO, "Correo enviado", ""));
+//        } catch (HeadlessException | MessagingException e) {
+//            FacesContext.getCurrentInstance().addMessage(null,
+//                    new FacesMessage(FacesMessage.SEVERITY_ERROR, "Hubo un error al intentar enviar el correo", ""));
+//            e.printStackTrace();
+//        }
+//    }
     public void enviarCorreo2() {
         // TODO add your handling code here:
         String correo = "info@tihsa.com"; //tu correo
         String password = "IT2020rec"; //tu contraseña
-        String mensaje = "Macpartes te informa que se ha anulado tu recibo de caja No. RCE-" + formatRCE(recibo.getNumRecibo()) + ". Motivo: " + contenido + " - Consultas: 2506-2909";;
+        String mensaje = "Macpartes te informa que se ha anulado tu recibo de caja No. RCE-" + formatRCE(recibo.getNumRecibo()) + ". Motivo: " + contenido + " - Consultas: 2506-2929";;
 //        String mensaje = "Gracias por el pago realizado a su cuenta con NIT " + recibo.getNit() + " por un monto de Q " + decimal(recibo.getMontoRecibo())
 //                + " el dia " + formatoFecha(recibo.getFecha()) + ". Para más información comunicarse al 2506 2900";
         String titulo = "Macpartes, S.A.";
@@ -1276,7 +1342,7 @@ public class ReciboController implements Serializable {
             SimpleDateFormat sdf = new SimpleDateFormat("HHmmss");
             String custom_id = sdf.format(new Date());
             String texto = "Macpartes te agradece por el pago realizado por un monto de Q " + decimal(recibo.getMontoRecibo()) + " el dia " + formatoFecha(recibo.getFecha())
-                    + ", segun detalle en recibo de caja No. RCE-" + formatRCE(recibo.getNumRecibo()) + ". Consultas al telefono 2506-2909";
+                    + ", segun detalle en recibo de caja No. RCE-" + formatRCE(recibo.getNumRecibo()) + ". No responder a este mensaje, cualquier consulta al telefono 2506-2929 con el depto. de contabilidad.";
             String dir = "https://www.waboxapp.com/api/send/chat?token=" + token + "&uid=" + UID + "&to=502" + recibo.getWhatsapp() + "&custom_uid=msg-" + custom_id + "&text=" + URLEncoder.encode(texto);
             System.out.println(dir);
             URL url = new URL(dir);//your url i.e fetch data from .
@@ -1380,8 +1446,6 @@ public class ReciboController implements Serializable {
 //
 //        }
 //    }
- 
-
     public String getPath() { //para obtener toda la direccion url (localhost/AltaIdea/)
         try {
             ServletContext ctx = (ServletContext) FacesContext.getCurrentInstance()
@@ -1723,4 +1787,116 @@ public class ReciboController implements Serializable {
         this.contenido = contenido;
     }
 
+}
+
+class Proceso extends Thread {
+
+    private String correo, ruta;
+    private Integer numRecibo;
+    private Double monto;
+    private Date fecha;
+    private FacesContext context;
+
+    public Proceso(String msg, String correo, Integer numRecibo, Double monto, Date fecha, String ruta, FacesContext context) {
+        super(msg);
+        this.correo = correo;
+        this.fecha = fecha;
+        this.monto = monto;
+        this.numRecibo = numRecibo;
+        this.ruta = ruta;
+        this.context = context;
+    }
+
+    public String formatRCE(Integer doub) {
+        String formato;
+        if (doub != null) {
+            DecimalFormat format = new DecimalFormat("000000");
+            formato = format.format(doub);
+        } else {
+            formato = "000";
+        }
+        return formato;
+    }
+
+    public String decimal(Double doub) {
+        String formato;
+        if (doub != null) {
+            DecimalFormat format = new DecimalFormat("##,###,##0.00");
+            formato = format.format(doub);
+        } else {
+            formato = "0.00";
+        }
+        return formato;
+    }
+
+    public String formatoFecha(Date date) {
+        String fecha;
+        if (date != null) {
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+                fecha = sdf.format(date);
+            } catch (Exception e) {
+                fecha = "";
+            }
+        } else {
+            fecha = "---";
+        }
+        return fecha;
+    }
+
+    @Override
+    public void run() {
+        System.out.println("Envia correo. No. recibo: " + numRecibo);
+        // TODO add your handling code here:
+        String user = "info@tihsa.com"; //tu correo
+        String password = "IT2020rec"; //tu contraseña
+        String mensaje = "Macpartes te agradece por el pago realizado por un monto de Q " + decimal(monto) + ", el día " + formatoFecha(fecha)
+                + ", según detalle en recibo de caja No. RCE-" + formatRCE(numRecibo) + ". No responder a este correo, cualquier consulta realizarla al telefono 2506-2929 con el departamento de contabilidad.";
+//        String mensaje = "Gracias por el pago realizado a su cuenta con NIT " + recibo.getNit() + " por un monto de Q " + decimal(recibo.getMontoRecibo())
+//                + " el dia " + formatoFecha(recibo.getFecha()) + ". Para más información comunicarse al 2506 2900";
+        String titulo = "Macpartes, S.A. - Recibos de caja";
+        String emisor = "Macpartes <info@tihsa.com>";//tu correo
+        String receptor = correo;
+
+        try {
+            Properties p = new Properties();
+
+            Properties props = new Properties();
+            props.setProperty("mail.smtp.host", "smtp.gmail.com");//host de hotmail
+            props.setProperty("mail.smtp.starttls.enable", "true");
+            props.setProperty("mail.smtp.port", "587");//puerto de conexion
+            props.setProperty("mail.smtp.user", user); //verificacion del correo
+            props.setProperty("mail.smtp.auth", "false");
+            Session session = Session.getDefaultInstance(props);
+            session.setDebug(true);
+            MimeMessage message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(emisor));
+            message.addRecipients(Message.RecipientType.TO, receptor); // remitente
+            message.addRecipients(Message.RecipientType.TO, "recibos@tihsa.com"); // remitente
+            message.setSubject(titulo);
+            message.setText(mensaje,
+                    "ISO-8859-1", "html");
+            BodyPart texto = new MimeBodyPart();
+            texto.setText(mensaje);
+            BodyPart archivo = new MimeBodyPart();
+            archivo.setDataHandler(new DataHandler(new FileDataSource(new File(ruta))));
+            archivo.setFileName("Recibo de Caja.pdf");
+            MimeMultipart body = new MimeMultipart();
+            body.addBodyPart(texto);
+            body.addBodyPart(archivo);
+            message.setContent(body);
+            Transport t = session.getTransport("smtp");
+            t.connect(user, password); // aquie es lo delicado donde se loguea
+            t.sendMessage(message, message.getAllRecipients());// aqi envia el mensaje
+            t.close();
+            System.out.println("Correo enviado");
+            FacesContext.getCurrentInstance().addMessage(null,
+                    new FacesMessage(FacesMessage.SEVERITY_INFO, "Correo enviado", ""));
+        } catch (HeadlessException | MessagingException e) {
+            System.out.println("No se envio el correo");
+            FacesContext.getCurrentInstance().addMessage(null,
+                    new FacesMessage(FacesMessage.SEVERITY_ERROR, "Hubo un error al intentar enviar el correo", ""));
+            e.printStackTrace();
+        }
+    }
 }

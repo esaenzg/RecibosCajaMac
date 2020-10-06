@@ -184,7 +184,7 @@
                                                     <p:inputText id="correo" value="#{reciboController.recibo.correo}"  style="height: 28px!important"  disabled="#{reciboController.recibo.montoRecibo eq null}"
                                                                  tabindex="20" readonly="#{reciboController.opcion ne 1 }" validatorMessage="El correo electrónico es incorrecto"
                                                                  placeholder="correo@ejemplo.com" required="#{reciboController.sendCorreo}" requiredMessage="* Correo electrónico">
-                                                        <f:validateRegex pattern="[\w\.-]*[a-zA-Z0-9_]@[\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]" disabled="#{not reciboController.sendCorreo}"/>
+                                                        <f:validateRegex pattern="[\w\.-]*[a-zA-Z0-9_]*[\w\.-]@[\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]" disabled="#{not reciboController.sendCorreo}"/>
                                                     </p:inputText>
                                                 </div>
                                             </div>
@@ -249,7 +249,7 @@
                             <p:outputLabel value="#{factura.serie}" style="text-transform: uppercase"/>
                         </p:column>
                         <p:column headerText="Factura/DTE"  style="text-align: center">
-                            <p:outputLabel value="#{factura.numDTE}" style="text-transform: uppercase"/>
+                            <p:outputLabel value="#{factura.numAutorizacion}" style="text-transform: uppercase"/>
                         </p:column>
                         <p:column headerText="Fecha" style="text-align: center">
                             <p:outputLabel value="#{reciboController.formatoFecha(factura.fecha)}"/>
@@ -322,6 +322,10 @@
                                      update="frmPDF2 frmPDF" disabled="#{reciboController.recibo.estado  eq 0}"
                                      title="Reimprimir recibo"
                                      action="#{reciboController.reimprimir()}" rendered="#{reciboController.opcion eq 0 and reciboController.verRecibo}"/>
+                    <p:commandButton value="Reenviar recibo" class="bg-green" icon="fa fa-send fa-fw" id="btnReenviar"
+                                     update="frmReenviar" disabled="#{reciboController.recibo.estado  eq 0}"
+                                     title="Reenviar recibo al cliente" onclick="PF('dlgReenviar').show();"
+                                     rendered="#{reciboController.opcion eq 0 and reciboController.verRecibo}"/>
                     <p:commandButton value="Anular" class="bg-red" icon="fa fa-remove fa-fw" id="btnAnular"
                                      update="frmPDF frmIngreso" disabled="#{reciboController.recibo.estado eq 0}"
                                      title="Anular recibo" oncomplete="PF('dlgAnular').show();"
@@ -394,7 +398,7 @@
                         <p:inputText id="correo" value="#{reciboController.recibo.correo}"  style="height: 28px!important"  disabled="#{reciboController.recibo.montoRecibo eq null}"
                                      validatorMessage="El correo electrónico es incorrecto"
                                      placeholder="correo@ejemplo.com" required="#{reciboController.sendCorreo}" requiredMessage="* Correo electrónico">
-                            <f:validateRegex pattern="[\w\.-]*[a-zA-Z0-9_]@[\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]" disabled="#{not reciboController.sendCorreo}"/>
+                            <f:validateRegex pattern="[\w\.-]*[a-zA-Z0-9_]*[\w\.-]@[\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]" disabled="#{not reciboController.sendCorreo}"/>
                         </p:inputText>
                         <p:outputLabel value="Whatsapp:" for="whatsapp"/>
                         <p:inputMask id="whatsapp" mask="99999999" value="#{reciboController.recibo.whatsapp}"  style="height: 28px!important" disabled="#{reciboController.recibo.montoRecibo eq null}"
@@ -429,6 +433,33 @@
                         <p:outputLabel value="Reimpresión del recibo de caja No. RCE-#{reciboController.formatRCE(reciboController.recibo.numRecibo)}"/><br/>
                         <p:commandButton value="Imprimir" icon="fa fa-file-pdf" title="Imprimir PDF" update="frmPDF"
                                          action="#{reciboController.reimprimir3()}" class="bg-blue-d"/>
+                    </center>
+                </h:form>
+            </p:dialog>
+            <p:dialog header="Reenviar recibo" responsive="true" resizable="false" showEffect="clip" closeOnEscape="true"
+                      hideEffect="clip" fitViewport="true" widgetVar="dlgReenviar" modal="true"  width="400">
+                <h:form id="frmReenviar">
+                    <h:panelGrid columns="2" width="100%" columnClasses="">
+                        <p:outputLabel value="Correo:" for="correo"/>
+                        <p:inputText id="correo" value="#{reciboController.recibo.correo}"  style="height: 28px!important"  disabled="#{reciboController.recibo.montoRecibo eq null}"
+                                     validatorMessage="El correo electrónico es incorrecto"
+                                     placeholder="correo@ejemplo.com" required="#{reciboController.sendCorreo}" requiredMessage="* Correo electrónico">
+                            <f:validateRegex pattern="[\w\.-]*[a-zA-Z0-9_]*[\w\.-]@[\w\.-]*[a-zA-Z0-9]\.[a-zA-Z][a-zA-Z\.]*[a-zA-Z]" disabled="#{not reciboController.sendCorreo}"/>
+                        </p:inputText>
+                        <p:outputLabel value=""/>
+                        <p:selectBooleanCheckbox value="#{reciboController.sndWhatsapp}"  itemLabel="Reenviar confirmación por whatsapp">
+                            <p:ajax update="frmReenviar:whatsapp"/>
+                        </p:selectBooleanCheckbox>
+                        <p:outputLabel value="Whatsapp:" for="whatsapp"/>
+                        <p:inputMask id="whatsapp" mask="99999999" value="#{reciboController.recibo.whatsapp}"  style="height: 28px!important" disabled="#{reciboController.recibo.montoRecibo eq null or not reciboController.sndWhatsapp}"
+                                     placeholder="Whatsapp" required="#{reciboController.sndWhatsapp and reciboController.recibo.codCliente ne 9999}" requiredMessage="* Whatsapp" validatorMessage="Debe ingresar los 8 dígitos del Whatsapp">
+                            <f:validateLength minimum="8" disabled="#{not reciboController.sndWhatsapp or (reciboController.sndWhatsapp and reciboController.recibo.whatsapp eq null)}" />
+                        </p:inputMask>
+                    </h:panelGrid>
+                    <br/>
+                    <center>
+                        <p:commandButton value="Enviar" icon="fa fa-send fa-fw" title="Enviar recibo" class="bg-green"
+                                         action="#{reciboController.reenviar()}"/>
                     </center>
                 </h:form>
             </p:dialog>
@@ -521,7 +552,7 @@
                                  paginatorPosition="top"
                                  rowIndexVar="row"
                                  selectionMode="single"
-                                 rowKey="#{factura.numDTE}">
+                                 rowKey="#{factura.numAutorizacion}">
                         <p:ajax event="rowSelect" listener="#{reciboController.selectFactura}" update="frmIngreso frmIngreso:porAsignar frmIngreso:btnGuardar"/>
                         <p:column headerText="No." width="40">
                             #{row+1}
@@ -530,7 +561,7 @@
                             <p:outputLabel value="#{factura.serie}"/>
                         </p:column>
                         <p:column headerText="Factura/DTE" style="text-align: center">
-                            <p:outputLabel value="#{factura.numDTE}" style="text-transform: uppercase"/>
+                            <p:outputLabel value="#{factura.numAutorizacion}" style="text-transform: uppercase"/>
                         </p:column>
                         <p:column headerText="Fecha" style="text-align: center">
                             <p:outputLabel value="#{reciboController.formatoFecha(factura.fecha)}"/>

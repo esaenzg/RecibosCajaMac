@@ -224,7 +224,7 @@ public class ImprimirRecibo implements Serializable {
             tablaPdf2.setWidthPercentage(100);
             tablaPdf2.setTotalWidth(500);
             tablaPdf2.setLockedWidth(true);
-            float[] anchoColumnas2 = {80, 80, 70, 80, 89, 90};
+            float[] anchoColumnas2 = {80, 65, 70, 65, 85, 120};
             tablaPdf2.setWidths(anchoColumnas2);
             tablaPdf2.setHorizontalAlignment(Element.ALIGN_CENTER);
             PdfPCell cell2;
@@ -878,7 +878,7 @@ public class ImprimirRecibo implements Serializable {
 
                     cell = new PdfPCell();
                     parrafo = new Paragraph();
-                    parrafo.add(new Chunk(lista.get(i).getNumDTE(), fuente1));
+                    parrafo.add(new Chunk(lista.get(i).getNumAutorizacion(), fuente1));
                     parrafo.setAlignment(Element.ALIGN_CENTER);
                     parrafo.setIndentationRight(8f);
                     cell.addElement(parrafo);
