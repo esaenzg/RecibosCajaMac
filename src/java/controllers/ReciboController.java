@@ -553,22 +553,22 @@ public class ReciboController implements Serializable {
                 + "as SaldoRecibo, F.NumeroRegistro from QRY_FAC_SaldosPagosHis Q inner join FAC_Facturas_C F on Q.SerieFactura=F.SerieFactura and Q.NumFactura=F.NumFactura where Q.NIT='" + recibo.getNit() + "' and ((select sum(abono) "
                 + "from FAC_Recibos_D R  where R.SerieFactura=Q.SerieFactura and R.NumDTE=Q.NumFactura and "
                 + "(R.Estado=1 or R.Estado is null))<>Saldo or (select sum(abono) from FAC_Recibos_D R where R.SerieFactura=Q.SerieFactura and R.NumDTE=Q.NumFactura and (R.Estado=1 or R.Estado is null)) "
-                + "is null) and Q.Cancelada=0 order by FechaFac asc;";
+                + "is null) and Q.Cancelada=0 order by FechaFac asc, F.Horas, F.Minutos asc;";
         System.out.println("query: " + query);
         ResultSet result = conexion.consulta(query);
         try {
             listAllFactura = new ArrayList<>();
             listDlgFactura = new ArrayList<>();
-            Factura factura;
+            Factura fac;
             while (result.next()) {
-                factura = new Factura();
-                factura.setSerie(result.getString(1));
-                factura.setNumDTE(result.getString(2));
-                factura.setNumAutorizacion(result.getString(6) != null && !result.getString(6).isEmpty() ? result.getString(6) : result.getString(2));
-                factura.setFecha(parsearFecha(result.getString(3)));
-                factura.setTotal(Double.valueOf(result.getString(5) != null ? result.getString(5) : result.getString(4)));
-                listAllFactura.add(factura);
-                listDlgFactura.add(factura);
+                fac = new Factura();
+                fac.setSerie(result.getString(1));
+                fac.setNumDTE(result.getString(2));
+                fac.setNumAutorizacion(result.getString(6) != null && !result.getString(6).isEmpty() ? result.getString(6) : result.getString(2));
+                fac.setFecha(parsearFecha(result.getString(3)));
+                fac.setTotal(Double.valueOf(result.getString(5) != null ? result.getString(5) : result.getString(4)));
+                listAllFactura.add(fac);
+                listDlgFactura.add(fac);
             }
         } catch (SQLException ex) {
             Logger.getLogger(ReciboController.class.getName()).log(Level.SEVERE, null, ex);

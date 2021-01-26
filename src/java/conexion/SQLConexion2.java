@@ -39,7 +39,7 @@ public class SQLConexion2 implements Serializable {
             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
             conexion = DriverManager.getConnection(url, user, pass);
             if (conexion != null) {
-                conexion.setCatalog("Tihsa");
+                conexion.setCatalog("Macpartes");
                 conexion.setAutoCommit(false);
                 state = conexion.createStatement();
                 System.out.println("Conexion exitosa");
